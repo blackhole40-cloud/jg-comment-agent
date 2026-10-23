@@ -1,0 +1,6 @@
+playwright
+yt-dlp
+openai
+fastapi
+uvicorn
+pyyaml

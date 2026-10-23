@@ -1,0 +1,5 @@
+profiles/
+data/
+.env
+__pycache__/
+test_videos/

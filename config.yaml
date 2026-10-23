@@ -1,0 +1,21 @@
+# 운명원 댓글 에이전트 설정
+
+profiles:            # 내 컴퓨터의 크롬 프로필 (폴더명: 표시명)
+  youtube1: 유튜브1
+  youtube2: 유튜브2
+  youtube3: 유튜브3
+
+channels:            # 불러오기 · 게시 허용 범위
+  UCxlc0Ky0aWoD8uI09ad44Tg: 외롭여
+  UC-ee_ziASM251TMXe3P3VZA: 리즈시절 LizTV
+  UC09L3JxGVcn7SKLa-pjTEmw: 러브커넥트 유지연
+  UCVdtDW-HF4KluixGaBAcI4w: 연애데이터 노노
+  UCkGl2jieOVhGiHPdXF77Yyw: 심리조각
+
+test_videos:         # 본인 테스트 영상 (채널과 무관하게 게시 허용)
+  - OzZjEMhDM1c   # 썸 탈 때 먼저 연락하면 지는 걸까?
+  - Kk55GnjRt2o   # 헤어진 사람에게 '잘 지내?' 연락이 왔을 때
+  - d5xr1778hRA   # 짝사랑 고백, 언제 해야 할까?
+
+comment: { min_chars: 40, max_chars: 120, brand: 운명원 }
+limits: { daily_max_comments: 10 }
