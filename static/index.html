@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>운명원 댓글 에이전트</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --panel: #fff; --fg: #1d2129; --muted: #6b7280; --line: #e3e6eb;
+    --accent: #c2185b; --accent-soft: #fde7f0; --ok: #1f7a4d; --ok-bg: #e3f4ea;
+    --bad: #b42318; --bad-bg: #fde8e7; --wait: #4b5563; --wait-bg: #eef0f3;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+         font: 14px/1.55 "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif; }
+  header { padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--panel);
+           display: flex; align-items: baseline; gap: 12px; }
+  header h1 { margin: 0; font-size: 18px; }
+  header span { color: var(--muted); font-size: 13px; }
+  main { display: grid; grid-template-columns: 1.15fr 1.2fr 0.9fr; gap: 14px; padding: 14px 20px; }
+  .col { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px;
+         display: flex; flex-direction: column; gap: 12px; min-width: 0; height: calc(100vh - 330px); min-height: 460px; }
+  .col h2 { margin: 0; font-size: 16px; display: flex; gap: 8px; align-items: center; }
+  .num { width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff;
+         display: inline-grid; place-items: center; font-size: 13px; flex: none; }
+  .hint { color: var(--muted); font-size: 13px; margin: 0; }
+  button.primary { background: var(--accent); color: #fff; border: 0; border-radius: 8px;
+                   padding: 11px 16px; font-size: 15px; font-weight: 700; cursor: pointer; }
+  button.primary:disabled { background: #d7a5b9; cursor: not-allowed; }
+  button.sub { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+  .list { overflow-y: auto; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .item { display: grid; grid-template-columns: 120px 1fr; gap: 10px; padding: 8px; border: 1px solid var(--line);
+          border-radius: 8px; cursor: pointer; background: var(--panel); text-align: left; font: inherit; color: inherit; }
+  .item:hover { border-color: var(--accent); }
+  .item.sel { border-color: var(--accent); background: var(--accent-soft); }
+  .item img { width: 120px; aspect-ratio: 16/9; object-fit: cover; border-radius: 5px; background: var(--line); }
+  .item .t { font-weight: 600; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .item .m { color: var(--muted); font-size: 12px; }
+  .tag { font-size: 11px; color: var(--accent); background: var(--accent-soft); border-radius: 4px; padding: 0 5px; margin-right: 4px; }
+  .row { display: flex; gap: 8px; }
+  input[type=text], select { flex: 1; min-width: 0; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
+  .card { border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+  .label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .worry { font-size: 15px; font-weight: 600; }
+  .comment { font-size: 15px; line-height: 1.7; white-space: pre-wrap; }
+  .chars { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  .vid { display: flex; gap: 10px; align-items: center; }
+  .vid img { width: 112px; aspect-ratio: 16/9; object-fit: cover; border-radius: 5px; }
+  .msg { border-radius: 8px; padding: 10px 12px; font-size: 13px; }
+  .msg.err { background: var(--bad-bg); color: var(--bad); }
+  .msg.info { background: var(--wait-bg); color: var(--wait); }
+  .steps { display: flex; flex-direction: column; gap: 8px; }
+  .step { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; background: var(--wait-bg); color: var(--muted); }
+  .step .dot { width: 10px; height: 10px; border-radius: 50%; background: #c4c8cf; flex: none; }
+  .step.now { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+  .step.now .dot { background: var(--accent); animation: pulse 1s infinite; }
+  .step.done { background: var(--ok-bg); color: var(--ok); }
+  .step.done .dot { background: var(--ok); }
+  .step.fail { background: var(--bad-bg); color: var(--bad); font-weight: 700; }
+  .step.fail .dot { background: var(--bad); }
+  @keyframes pulse { 50% { opacity: .3; } }
+  @media (prefers-reduced-motion: reduce) { .step.now .dot { animation: none; } }
+  .shot { max-width: 100%; border: 1px solid var(--line); border-radius: 6px; }
+  .spinner { width: 18px; height: 18px; border: 3px solid var(--line); border-top-color: var(--accent);
+             border-radius: 50%; animation: spin .8s linear infinite; display: inline-block; vertical-align: middle; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  section.log { margin: 0 20px 20px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  section.log h2 { margin: 0 0 8px; font-size: 15px; }
+  .logwrap { max-height: 220px; overflow: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--panel); }
+  .st { font-weight: 700; white-space: nowrap; }
+  .st.posted { color: var(--ok); } .st.failed { color: var(--bad); } .st.run { color: var(--accent); }
+  a { color: var(--accent); }
+  [hidden] { display: none !important; }
+  /* 화면 절반 폭(대시보드 왼쪽 + 유튜브 오른쪽)에서도 세 칸을 나란히 */
+  @media (max-width: 1100px) {
+    body { font-size: 13px; }
+    header { padding: 10px 12px; } header span { display: none; }
+    main { gap: 8px; padding: 8px 10px; grid-template-columns: 1fr 1fr 0.85fr; }
+    .col { padding: 10px; gap: 8px; }
+    .item { grid-template-columns: 84px 1fr; gap: 6px; padding: 6px; }
+    .item img { width: 84px; }
+    button.primary { padding: 9px 10px; font-size: 14px; }
+    #profileSel { width: 100%; max-width: 100%; font-size: 12px; }
+  }
+  @media (max-width: 600px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>운명원 댓글 에이전트</h1>
+  <span>① 영상 불러오기 → ② 영상 선택 → ③ 댓글 달기</span>
+</header>
+
+<main>
+  <!-- ① -->
+  <div class="col">
+    <h2><span class="num">1</span>영상 불러오기</h2>
+    <button id="btnLoad" class="primary">영상 불러오기</button>
+    <button id="btnRising" class="sub">'연애' 뜨기 직전 영상 찾기</button>
+    <p class="hint" id="loadHint">지정 채널 5개의 최신 영상을 불러옵니다.</p>
+    <div class="list" id="list"></div>
+  </div>
+
+  <!-- ② -->
+  <div class="col">
+    <h2><span class="num">2</span>영상 선택</h2>
+    <p class="hint">①의 목록에서 영상을 고르거나, 영상 링크를 직접 입력하세요.</p>
+    <div class="row">
+      <input type="text" id="linkInput" placeholder="https://www.youtube.com/watch?v=...">
+      <button class="sub" id="btnLink">링크로 선택</button>
+    </div>
+    <div id="draftArea" class="list" style="gap:12px">
+      <p class="hint">선택한 영상의 고민 한 줄과 댓글 초안이 여기에 표시됩니다.</p>
+    </div>
+  </div>
+
+  <!-- ③ -->
+  <div class="col">
+    <h2><span class="num">3</span>댓글 달기</h2>
+    <div>
+      <div class="label">게시할 크롬 프로필</div>
+      <select id="profileSel"></select>
+    </div>
+    <button id="btnPost" class="primary" disabled>댓글 달기</button>
+    <div class="steps" id="steps">
+      <div class="step" data-k="opening"><span class="dot"></span>프로필 여는 중</div>
+      <div class="step" data-k="typing"><span class="dot"></span>입력 중</div>
+      <div class="step" data-k="posted"><span class="dot"></span><span>게시 완료 · <a id="viewLink" href="#" target="_blank" hidden>댓글 보기</a></span></div>
+    </div>
+    <div id="postMsg"></div>
+  </div>
+</main>
+
+<section class="log">
+  <h2>게시 기록</h2>
+  <div class="logwrap">
+    <table>
+      <thead><tr><th>시간</th><th>영상</th><th>프로필</th><th>댓글</th><th>결과</th></tr></thead>
+      <tbody id="logBody"><tr><td colspan="5" class="hint">아직 기록이 없습니다.</td></tr></tbody>
+    </table>
+  </div>
+</section>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let current = null;      // 현재 선택된 영상 + 초안
+let polling = null;
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || `오류 (${res.status})`);
+  return data;
+}
+
+function fmtDate(s) {
+  if (!s) return "";
+  const d = new Date(s);
+  return isNaN(d) ? s : `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
+}
+
+// ---------- ① ----------
+$("btnLoad").onclick = async () => {
+  $("btnLoad").disabled = true;
+  $("loadHint").innerHTML = '<span class="spinner"></span>불러오는 중...';
+  try {
+    const { videos, errors } = await api("/api/videos");
+    const failed = Object.keys(errors || {});
+    $("loadHint").textContent = `${videos.length}개 영상` + (failed.length ? ` · 불러오지 못한 채널: ${failed.join(", ")}` : "");
+    $("list").innerHTML = videos.map(v => `
+      <button class="item" data-id="${esc(v.video_id)}">
+        <img src="${esc(v.thumbnail)}" alt="">
+        <div>
+          <div class="t">${esc(v.title)}</div>
+          <div class="m">${v.is_test ? '<span class="tag">테스트</span>' : ""}${esc(v.channel)}${v.published ? " · " + fmtDate(v.published) : ""}</div>
+        </div>
+      </button>`).join("");
+    document.querySelectorAll(".item").forEach(el => el.onclick = () => selectVideo(el.dataset.id, el, false));
+  } catch (e) {
+    $("loadHint").textContent = "불러오기 실패: " + e.message;
+  } finally {
+    $("btnLoad").disabled = false;
+  }
+};
+
+$("btnRising").onclick = async () => {
+  $("btnRising").disabled = true;
+  $("loadHint").innerHTML = '<span class="spinner"></span>최근 올라온 연애 영상에서 찾는 중... (30초~1분)';
+  try {
+    const { videos, checked } = await api("/api/rising");
+    $("loadHint").textContent = `뜨기 직전 영상 ${videos.length}개 (조회수 1,000~5,000 · 시간당 150회 이상, 후보 ${checked}개 확인) · 초안까지만 만듭니다`;
+    $("list").innerHTML = videos.length ? videos.map(v => `
+      <button class="item" data-id="${esc(v.video_id)}">
+        <img src="${esc(v.thumbnail)}" alt="">
+        <div>
+          <div class="t">${esc(v.title)}</div>
+          <div class="m"><span class="tag">뜨기 직전</span>${esc(v.channel)}</div>
+          <div class="m">조회수 ${v.view_count.toLocaleString()} · 시간당 ${v.per_hour.toLocaleString()}회 · ${v.hours}시간 전</div>
+        </div>
+      </button>`).join("") : '<p class="hint">지금은 조건에 맞는 영상이 없습니다. 잠시 뒤 다시 찾아보세요.</p>';
+    document.querySelectorAll(".item").forEach(el => el.onclick = () => selectVideo(el.dataset.id, el, true));
+  } catch (e) {
+    $("loadHint").textContent = "찾기 실패: " + e.message;
+  } finally {
+    $("btnRising").disabled = false;
+  }
+};
+
+// ---------- ② ----------
+$("btnLink").onclick = () => {
+  const v = $("linkInput").value.trim();
+  if (v) selectVideo(v, null, false);
+};
+$("linkInput").onkeydown = (e) => { if (e.key === "Enter") $("btnLink").click(); };
+
+async function selectVideo(video, el, draftOnly) {
+  document.querySelectorAll(".item").forEach(x => x.classList.toggle("sel", x === el));
+  current = null;
+  $("btnPost").disabled = true;
+  resetSteps();
+  $("draftArea").innerHTML = '<p class="hint"><span class="spinner"></span>영상 자막과 인기 댓글을 읽고 초안을 만드는 중... (20~60초)</p>';
+  try {
+    const d = await api("/api/draft", { method: "POST", body: JSON.stringify({ video, draft_only: !!draftOnly }) });
+    current = d;
+    $("draftArea").innerHTML = `
+      <div class="vid"><img src="${esc(d.thumbnail)}" alt=""><div>
+        <div style="font-weight:600">${esc(d.title)}</div>
+        <div class="hint">${esc(d.channel)}</div></div></div>
+      <div class="card"><div class="label">영상 속 고민 한 줄</div><div class="worry">${esc(d.worry)}</div></div>
+      <div class="card"><div class="label">댓글 초안</div><div class="comment">${esc(d.comment)}</div>
+        <div class="chars">${d.chars}자</div></div>
+      ${d.postable ? "" : '<div class="msg info">허용된 5개 채널 밖의 영상이라 초안까지만 만듭니다. (게시 불가)</div>'}
+      ${d.ok ? "" : `<div class="msg err">규칙을 통과하지 못한 초안이라 게시할 수 없습니다: ${esc(d.errors.join("; "))}<br>영상을 다시 선택하면 새 초안을 만듭니다.</div>`}`;
+    $("btnPost").disabled = !(d.ok && d.postable);
+  } catch (e) {
+    $("draftArea").innerHTML = `<div class="msg err">${esc(e.message)}</div>`;
+  }
+}
+
+// ---------- ③ ----------
+async function loadProfiles() {
+  const cfg = await api("/api/config");
+  const ready = cfg.profiles.filter(p => p.ready);
+  const nextName = (cfg.profiles.find(p => p.id === cfg.next_profile) || {}).name;
+  $("profileSel").innerHTML =
+    `<option value="">자동 배정 (영상마다 돌아가며${nextName ? " · 다음: " + esc(nextName) : ""})</option>` +
+    cfg.profiles.map(p => `<option value="${esc(p.id)}" ${p.ready ? "" : "disabled"}>${esc(p.name)}${p.ready ? "" : " (로그인 안 됨)"}</option>`).join("");
+  if (!ready.length) $("postMsg").innerHTML = '<div class="msg err">로그인된 크롬 프로필이 없습니다. scripts/setup_profile.py 로 먼저 로그인하세요.</div>';
+}
+
+function resetSteps() {
+  document.querySelectorAll(".step").forEach(s => s.className = "step");
+  $("viewLink").hidden = true;
+  $("postMsg").innerHTML = "";
+}
+
+let lastRunning = "opening";   // 실패했을 때 어느 단계에서 멈췄는지 표시용
+function showStatus(p) {
+  const order = ["opening", "typing", "posted"];
+  if (order.includes(p.status) && p.status !== "posted") lastRunning = p.status;
+  const cur = p.status === "pending" ? "opening" : p.status;
+  document.querySelectorAll(".step").forEach(s => {
+    const i = order.indexOf(s.dataset.k);
+    s.className = "step";
+    if (cur === "posted") s.classList.add("done");
+    else if (cur === "failed") {
+      const fi = order.indexOf(lastRunning);
+      if (i < fi) s.classList.add("done");
+      else if (i === fi) s.classList.add("fail");
+    } else {
+      const ci = order.indexOf(cur);
+      if (i < ci) s.classList.add("done");
+      else if (i === ci) s.classList.add("now");
+    }
+  });
+  if (cur === "posted") {
+    $("viewLink").href = `https://www.youtube.com/watch?v=${p.video_id}`;
+    $("viewLink").hidden = false;
+  }
+  if (cur === "failed") {
+    $("postMsg").innerHTML = `<div class="msg err"><b>실패:</b> ${esc(p.reason || "알 수 없는 오류")}</div>` +
+      (p.shot ? `<a href="/shots/${encodeURIComponent(p.shot)}" target="_blank"><img class="shot" src="/shots/${encodeURIComponent(p.shot)}" alt="실패 화면 캡처"></a>` : "");
+  }
+}
+
+$("btnPost").onclick = async () => {
+  if (!current) return;
+  resetSteps();
+  $("btnPost").disabled = true;
+  document.querySelector('.step[data-k="opening"]').classList.add("now");
+  try {
+    const r = await api("/api/post", { method: "POST",
+      body: JSON.stringify({ video_id: current.video_id, profile: $("profileSel").value || null }) });
+    $("postMsg").innerHTML = `<div class="msg info">${esc(r.profile_name)} 프로필로 게시합니다.</div>`;
+    lastRunning = "opening";
+    loadLog();
+    let lastStatus = "";
+    clearInterval(polling);
+    polling = setInterval(async () => {
+      const p = await api(`/api/post/${r.post_id}`);
+      if (p.status !== lastStatus) { lastStatus = p.status; showStatus(p); }
+      if (p.status === "posted" || p.status === "failed") {
+        clearInterval(polling);
+        if (p.status === "failed") $("btnPost").disabled = false;  // 실패는 같은 영상에 재시도 가능
+        loadLog(); loadProfiles();
+      }
+    }, 1000);
+  } catch (e) {
+    resetSteps();
+    $("postMsg").innerHTML = `<div class="msg err">${esc(e.message)}</div>`;
+    $("btnPost").disabled = false;
+  }
+};
+
+// ---------- 기록 ----------
+const ST = { posted: "성공", failed: "실패", pending: "대기", opening: "진행 중", typing: "진행 중" };
+async function loadLog() {
+  const { rows } = await api("/api/log");
+  if (!rows.length) return;
+  $("logBody").innerHTML = rows.map(r => `
+    <tr>
+      <td style="white-space:nowrap">${esc(r.ts.replace("T", " ").slice(0, 16))}</td>
+      <td><a href="https://www.youtube.com/watch?v=${esc(r.video_id)}" target="_blank">${esc(r.title || r.video_id)}</a><div class="hint">${esc(r.channel || "")}</div></td>
+      <td style="white-space:nowrap">${esc(r.profile_name)}</td>
+      <td>${esc(r.comment)}</td>
+      <td><span class="st ${r.status === "posted" ? "posted" : r.status === "failed" ? "failed" : "run"}">${ST[r.status] || r.status}</span>
+        ${r.status === "failed" ? `<div class="hint">${esc(r.reason || "")}</div>${r.shot ? `<a href="/shots/${encodeURIComponent(r.shot)}" target="_blank">캡처</a>` : ""}` : ""}</td>
+    </tr>`).join("");
+}
+
+loadProfiles();
+loadLog();
+</script>
+</body>
+</html>
